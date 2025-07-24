@@ -141,6 +141,9 @@ cd streamz-zmq
 # Install with uv (uses uv.lock for reproducible builds)
 uv sync --dev
 
+# Set up pre-commit hooks (recommended)
+uv run pre-commit install
+
 # Run tests
 uv run pytest
 
@@ -155,6 +158,8 @@ uv build
 ```
 
 **Note**: This project uses `uv.lock` for reproducible dependency management. The lock file is committed to ensure all developers and CI/CD use identical dependency versions.
+
+**Pre-commit hooks**: The project includes pre-commit hooks that automatically format code, check linting, and run tests before each commit to maintain code quality.
 
 ## License
 
