@@ -9,7 +9,7 @@ from streamz.sources import Source
 class from_zmq(Source):
     """Accepts messages from a ZMQ socket.
 
-    This source connects to a ZMQ publisher and receives messages,
+    This source connects to a ZMQ socket and receives messages,
     which are then emitted into the stream.
 
     Requires the ``pyzmq`` library.
@@ -17,13 +17,40 @@ class from_zmq(Source):
     Parameters
     ----------
     connect_str: str
-        The ZMQ connection string, e.g., "tcp://localhost:5555".
+        The ZMQ connection string to connect to.
+        Format: "tcp://hostname:port"
+
+        Note: Sources typically connect to existing publishers/services.
+        Use to_zmq with bind=True to create the service side.
+
     sock_type: int, optional
-        The ZMQ socket type, like zmq.SUB or zmq.PULL.
-        Defaults to zmq.SUB.
+        The ZMQ socket type for receiving data:
+
+        - zmq.SUB (default): Subscribe to broadcast messages (pairs with PUB)
+        - zmq.PULL: Receive work items (pairs with PUSH)
+        - zmq.REQ: Send requests (pairs with REP)
+
     subscribe: bytes, optional
-        If using a SUB socket, this is the subscription topic.
+        Subscription topic for SUB sockets. Use b"" to receive all messages.
         Defaults to b'', which subscribes to all messages.
+
+    Examples
+    --------
+    Subscribe to broadcast data:
+
+    >>> source = Stream.from_zmq("tcp://dataserver:5555", sock_type=zmq.SUB)
+    >>> source = Stream.from_zmq("tcp://feeds:8080")  # SUB is default
+
+    Receive work items for processing:
+
+    >>> source = Stream.from_zmq("tcp://workqueue:6666", sock_type=zmq.PULL)
+
+    Pipeline pattern (receive from one service, send to another):
+
+    >>> # Receive data, process it, send results
+    >>> source = Stream.from_zmq("tcp://input:5555", sock_type=zmq.SUB)
+    >>> processed = source.map(transform_data)
+    >>> processed.to_zmq("tcp://output:6666", sock_type=zmq.PUSH)
     """
 
     def __init__(self, connect_str, sock_type=None, subscribe=b"", **kwargs):

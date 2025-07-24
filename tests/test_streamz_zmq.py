@@ -118,3 +118,124 @@ async def test_zmq_integration():
         assert any(expected_msg in received for received in received_strings), (
             f"Expected '{expected_msg}' in received messages: {received_strings}"
         )
+
+
+@pytest.mark.asyncio
+async def test_zmq_pipeline_integration():
+    """Test a complete pipeline: ZMQ → Stream1 → Processing → ZMQ → Stream2 → Results."""
+    input_port = 5557
+    intermediate_port = 5558
+    test_numbers = [1, 2, 3, 4]
+    final_results = []
+
+    # Start publisher thread (publishes numbers)
+    publisher_thread = threading.Thread(
+        target=zmq_publisher_thread,
+        args=(input_port, [str(n) for n in test_numbers], 0.15),
+    )
+
+    # === STREAM 1: Receive → Process → Send ===
+    # Step 1: Receive from first ZMQ source
+    stream1 = Stream.from_zmq(f"tcp://localhost:{input_port}", sock_type=zmq.SUB)
+
+    # Step 2: Process the data (convert to int, square it, format as result)
+    def process_message(msg):
+        """Process incoming message: decode, convert to int, square it."""
+        if isinstance(msg, bytes):
+            msg = msg.decode("utf-8")
+        elif isinstance(msg, list):
+            msg = msg[0].decode("utf-8") if msg else "0"
+
+        try:
+            number = int(msg.strip())
+            squared = number * number
+            result = f"processed_{number}_squared_{squared}"
+            print(f"Stream1 processed: {number} → {result}")  # Debug
+            return result
+        except (ValueError, AttributeError):
+            return f"error_processing_{msg}"
+
+    processed_stream = stream1.map(process_message)
+
+    # Step 3: Send processed results via ZMQ (PUSH socket that binds)
+    processed_stream.to_zmq(
+        f"tcp://*:{intermediate_port}", sock_type=zmq.PUSH, bind=True
+    )
+
+    # === STREAM 2: Receive → Collect Results ===
+    # Step 4: Second stream receives processed data (PULL socket that connects)
+    stream2 = Stream.from_zmq(
+        f"tcp://localhost:{intermediate_port}", sock_type=zmq.PULL
+    )
+
+    # Step 5: Collect final results
+    def collect_result(msg):
+        """Collect the final processed results."""
+        if isinstance(msg, bytes):
+            decoded = msg.decode("utf-8")
+        elif isinstance(msg, list):
+            decoded = msg[0].decode("utf-8") if msg else ""
+        else:
+            decoded = str(msg)
+
+        print(f"Stream2 received: {decoded}")  # Debug
+        final_results.append(decoded)
+
+    stream2.sink(collect_result)
+
+    # Start everything in the right order
+    # 1. Start stream1 first (it will bind the intermediate socket)
+    stream1.start()
+    time.sleep(0.3)  # Give stream1 time to bind
+
+    # 2. Start stream2 (it will connect to stream1's output)
+    stream2.start()
+    time.sleep(0.2)  # Give stream2 time to connect
+
+    # 3. Start publisher last
+    publisher_thread.start()
+
+    # Wait for processing to complete
+    await asyncio.sleep(3.0)
+
+    # Stop both streams
+    stream1.stop()
+    stream2.stop()
+
+    # Wait for publisher to finish
+    publisher_thread.join(timeout=2.0)
+
+    # Verify we got the expected results
+    assert len(final_results) > 0, f"No results received: {final_results}"
+
+    # Check that we got processed results for each input number
+    expected_patterns = [
+        "processed_1_squared_1",
+        "processed_2_squared_4",
+        "processed_3_squared_9",
+        "processed_4_squared_16",
+    ]
+
+    print(f"Final results received: {final_results}")  # Debug output
+
+    # Verify we got all expected processed messages
+    matches = 0
+    for expected in expected_patterns:
+        if any(expected in result for result in final_results):
+            matches += 1
+
+    # We should get ALL 4 messages processed correctly
+    assert matches == 4, (
+        f"Expected all 4 processed messages, got {matches} matches from: {final_results}"
+    )
+
+    # Also verify we received exactly 4 results (no duplicates or extras)
+    assert len(final_results) == 4, (
+        f"Expected exactly 4 results, got {len(final_results)}: {final_results}"
+    )
+
+    # Verify all received messages have the expected format
+    for result in final_results:
+        assert "processed_" in result and "_squared_" in result, (
+            f"Unexpected result format: {result}"
+        )
