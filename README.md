@@ -1,6 +1,7 @@
 # streamz-zmq
 
 [![PyPI version](https://badge.fury.io/py/streamz-zmq.svg)](https://badge.fury.io/py/streamz-zmq)
+[![GitHub release](https://img.shields.io/github/v/release/izzet/streamz-zmq)](https://github.com/izzet/streamz-zmq/releases)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
 ZeroMQ integration for [streamz](https://streamz.readthedocs.io/) - enabling high-performance streaming data processing with distributed messaging.
