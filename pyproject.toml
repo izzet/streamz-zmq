@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "streamz-zmq"
+version = "0.1.0"
+description = "ZeroMQ integration for streamz - high-performance streaming data processing"
+authors = [{ name = "Izzet Yildirim", email = "izzetcyildirim@gmail.com" }]
+maintainers = [{ name = "Izzet Yildirim", email = "izzetcyildirim@gmail.com" }]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = ["pyzmq>=27.0.0", "streamz>=0.6.4"]
+keywords = ["streaming", "zeromq", "zmq", "data-processing", "real-time"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing",
+    "Topic :: System :: Networking",
+]
+
+[project.urls]
+Homepage = "https://github.com/izzet/streamz-zmq"
+Repository = "https://github.com/izzet/streamz-zmq"
+Documentation = "https://github.com/izzet/streamz-zmq#readme"
+"Bug Tracker" = "https://github.com/izzet/streamz-zmq/issues"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.5",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
