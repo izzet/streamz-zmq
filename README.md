@@ -28,18 +28,25 @@ uv add streamz-zmq
 
 ## Quick Start
 
+
 ### Receiving data from ZMQ (Source)
 
 ```python
 from streamz import Stream
 import streamz_zmq  # Register the ZMQ extensions
+import zmq
 
-# Create a stream that receives from a ZMQ publisher
+# Create a stream that receives from a ZMQ publisher (connect mode, default)
 source = Stream.from_zmq("tcp://localhost:5555")
 source.sink(print)  # Print received messages
 
 # Start the stream
 source.start()
+
+# Or, act as a collector/server and accept connections from publishers:
+collector = Stream.from_zmq("tcp://*:6000", sock_type=zmq.PULL, bind=True)
+collector.sink(print)
+collector.start()
 ```
 
 ### Sending data to ZMQ (Sink)
@@ -48,9 +55,12 @@ source.start()
 from streamz import Stream
 import streamz_zmq  # Register the ZMQ extensions
 
-# Create a stream and send results to ZMQ
+# Create a stream and send results to an existing ZMQ service (default: connect mode)
 source = Stream.from_iterable([1, 2, 3, 4, 5])
-source.map(lambda x: x * 2).to_zmq("tcp://*:5556")
+source.map(lambda x: x * 2).to_zmq("tcp://localhost:5556")
+
+# Or, act as a service and accept connections from ZMQ clients (bind mode)
+source.map(...).to_zmq("tcp://*:5556", bind=True)
 
 # Start the stream
 source.start()
@@ -103,22 +113,25 @@ uv run python examples/comprehensive_example.py
 
 ## API Reference
 
-### `Stream.from_zmq(connect_str, sock_type=zmq.SUB, subscribe=b"")`
+
+### `Stream.from_zmq(connect_str, sock_type=zmq.SUB, subscribe=b"", bind=False)`
 
 Creates a stream source that receives messages from a ZMQ socket.
 
 **Parameters:**
-- `connect_str` (str): ZMQ connection string (e.g., "tcp://localhost:5555")
+- `connect_str` (str): ZMQ connection string (e.g., "tcp://localhost:5555" for connect, or "tcp://*:5555" for bind)
 - `sock_type` (int, optional): ZMQ socket type. Defaults to `zmq.SUB`
 - `subscribe` (bytes, optional): Subscription topic for SUB sockets. Defaults to `b""` (all messages)
+- `bind` (bool, optional): If True, bind the socket (act as a server/collector). If False (default), connect to the address.
 
-### `stream.to_zmq(connect_str, sock_type=zmq.PUSH)`
+### `stream.to_zmq(connect_str, sock_type=zmq.PUSH, bind=False)`
 
 Sends stream elements to a ZMQ socket.
 
 **Parameters:**
-- `connect_str` (str): ZMQ connection string (e.g., "tcp://*:5556") 
+- `connect_str` (str): ZMQ connection string (e.g., "tcp://*:5556" for bind, or "tcp://localhost:5556" for connect)
 - `sock_type` (int, optional): ZMQ socket type. Defaults to `zmq.PUSH`
+- `bind` (bool, optional): If True, bind the socket (act as a service). If False (default), connect to the address.
 
 ## ZMQ Patterns Supported
 
