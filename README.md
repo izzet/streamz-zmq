@@ -9,7 +9,7 @@ ZeroMQ integration for [streamz](https://streamz.readthedocs.io/) - enabling hig
 ## Features
 
 - **ZMQ Source (`from_zmq`)**: Receive data streams from ZeroMQ publishers
-- **ZMQ Sink (`to_zmq`)**: Send processed data to ZeroMQ sockets  
+- **ZMQ Sink (`to_zmq`)**: Send processed data to ZeroMQ sockets
 - **Async Support**: Built with asyncio for high-performance streaming
 - **Multiple Patterns**: Support for PUB/SUB, PUSH/PULL, and other ZMQ patterns
 - **Seamless Integration**: Extends streamz with familiar API patterns
@@ -27,7 +27,6 @@ uv add streamz-zmq
 ```
 
 ## Quick Start
-
 
 ### Receiving data from ZMQ (Source)
 
@@ -76,14 +75,14 @@ import streamz_zmq
 async def main():
     # Receive from one ZMQ socket, process, send to another
     source = Stream.from_zmq("tcp://localhost:5555")
-    
+
     processed = (source
                 .map(lambda x: x.decode('utf-8'))  # Decode bytes
                 .map(str.upper)                    # Process data
                 .map(str.encode))                  # Encode back to bytes
-    
+
     processed.to_zmq("tcp://*:5556")
-    
+
     # Start processing
     await source.start()
 
@@ -98,28 +97,30 @@ Check out the `examples/` directory for demonstrations:
 - **`simple_example.py`**: Basic example showing ZMQ publisher thread + streamz subscriber
 - **`comprehensive_example.py`**: Advanced demonstration showing multiple ZMQ patterns:
   - **PUB/SUB**: Publisher broadcasts weather updates to topic-specific subscribers
-  - **PUSH/PULL**: Load balancing work distribution across multiple workers  
+  - **PUSH/PULL**: Load balancing work distribution across multiple workers
   - **Pipeline**: Multi-stage data processing pipeline
 
 Run the simple example:
+
 ```bash
 uv run python examples/simple_example.py
 ```
 
 Run the comprehensive example:
+
 ```bash
 uv run python examples/comprehensive_example.py
 ```
 
 ## API Reference
 
-
 ### `Stream.from_zmq(connect_str, sock_type=zmq.SUB, subscribe=b"", bind=False)`
 
 Creates a stream source that receives messages from a ZMQ socket.
 
 **Parameters:**
-- `connect_str` (str): ZMQ connection string (e.g., "tcp://localhost:5555" for connect, or "tcp://*:5555" for bind)
+
+- `connect_str` (str): ZMQ connection string (e.g., "tcp://localhost:5555" for connect, or "tcp://\*:5555" for bind)
 - `sock_type` (int, optional): ZMQ socket type. Defaults to `zmq.SUB`
 - `subscribe` (bytes, optional): Subscription topic for SUB sockets. Defaults to `b""` (all messages)
 - `bind` (bool, optional): If True, bind the socket (act as a server/collector). If False (default), connect to the address.
@@ -129,7 +130,8 @@ Creates a stream source that receives messages from a ZMQ socket.
 Sends stream elements to a ZMQ socket.
 
 **Parameters:**
-- `connect_str` (str): ZMQ connection string (e.g., "tcp://*:5556" for bind, or "tcp://localhost:5556" for connect)
+
+- `connect_str` (str): ZMQ connection string (e.g., "tcp://\*:5556" for bind, or "tcp://localhost:5556" for connect)
 - `sock_type` (int, optional): ZMQ socket type. Defaults to `zmq.PUSH`
 - `bind` (bool, optional): If True, bind the socket (act as a service). If False (default), connect to the address.
 
@@ -141,7 +143,7 @@ Sends stream elements to a ZMQ socket.
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.8+
 - streamz >= 0.6.4
 - pyzmq >= 27.0.0
 
