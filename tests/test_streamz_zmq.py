@@ -239,3 +239,47 @@ async def test_zmq_pipeline_integration():
         assert "processed_" in result and "_squared_" in result, (
             f"Unexpected result format: {result}"
         )
+
+
+@pytest.mark.asyncio
+def test_zmq_from_zmq_bind():
+    """Test that from_zmq can bind and receive messages from a connecting publisher."""
+    bind_port = 5560
+    test_messages = ["alpha", "beta", "gamma", "delta"]
+    received = []
+
+    def publisher():
+        ctx = zmq.Context()
+        sock = ctx.socket(zmq.PUSH)
+        # Publisher connects to the bound source
+        sock.connect(f"tcp://localhost:{bind_port}")
+        time.sleep(0.2)  # Give the source time to bind
+        for msg in test_messages:
+            sock.send_string(msg)
+            time.sleep(0.05)
+        sock.close()
+        ctx.term()
+
+    # Start the source stream (binds)
+    source = Stream.from_zmq(f"tcp://*:{bind_port}", sock_type=zmq.PULL, bind=True)
+    source.sink(received.append)
+    source.start()
+
+    # Start publisher thread
+    pub_thread = threading.Thread(target=publisher)
+    pub_thread.start()
+
+    # Wait for messages
+    asyncio.get_event_loop().run_until_complete(asyncio.sleep(1.0))
+    source.stop()
+    pub_thread.join(timeout=1.0)
+
+    # Check all messages received
+    received_strs = [
+        msg if isinstance(msg, str) else msg.decode("utf-8") for msg in received
+    ]
+    assert len(received_strs) == len(test_messages), (
+        f"Expected {len(test_messages)} messages, got {received_strs}"
+    )
+    for expected in test_messages:
+        assert expected in received_strs, f"Missing message: {expected}"
