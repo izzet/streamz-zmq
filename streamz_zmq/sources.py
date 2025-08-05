@@ -9,34 +9,25 @@ from streamz.sources import Source
 class from_zmq(Source):
     """Accepts messages from a ZMQ socket.
 
-    This source connects to or binds a ZMQ socket and receives messages,
-    which are then emitted into the stream.
+    This source can either connect to an existing ZMQ service (client mode)
+    or bind to an address to create a new one (server mode).
 
-    Requires the ``pyzmq`` library.
+    When binding (bind=True), the socket type defaults to zmq.PULL to create a
+    reliable data ingestion service.
 
     Parameters
     ----------
-    connect_str: str
-        The ZMQ connection string to connect or bind to.
-        Format: "tcp://hostname:port" (for connect) or "tcp://*:port" (for bind)
-
-        Note: By default, sources connect to publishers. Use bind=True to have the source
-        act as a server and accept connections from publishers.
-
+    address: str
+        The ZMQ connection string (e.g., "tcp://hostname:port").
     sock_type: int, optional
-        The ZMQ socket type for receiving data:
-
-        - zmq.SUB (default): Subscribe to broadcast messages (pairs with PUB)
-        - zmq.PULL: Receive work items (pairs with PUSH)
-        - zmq.REQ: Send requests (pairs with REP)
-
-    subscribe: bytes, optional
-        Subscription topic for SUB sockets. Use b"" to receive all messages.
-        Defaults to b'', which subscribes to all messages.
-
+        ZMQ socket type.
+        - If bind=False, defaults to zmq.SUB.
+        - If bind=True, defaults to zmq.PULL.
     bind: bool, optional
-        If True, bind the socket to the given address (act as a server).
-        If False (default), connect to the address (act as a client).
+        - False (default): Connect to an existing service (client mode).
+        - True: Bind to the address to create a service (server mode).
+    subscribe: bytes, optional
+        For SUB sockets, the topic to subscribe to. Defaults to b"" (all).
 
     Examples
     --------
@@ -51,7 +42,7 @@ class from_zmq(Source):
 
     Bind to a port and accept connections from publishers:
 
-    >>> source = Stream.from_zmq("tcp://*:5555", sock_type=zmq.PULL, bind=True)
+    >>> source = Stream.from_zmq("tcp://*:5555", bind=True)  # PULL is default for bind
 
     Pipeline pattern (receive from one service, send to another):
 
@@ -61,15 +52,38 @@ class from_zmq(Source):
     >>> processed.to_zmq("tcp://output:6666", sock_type=zmq.PUSH)
     """
 
-    def __init__(
-        self, connect_str, sock_type=None, subscribe=b"", bind=False, **kwargs
-    ):
-        self.connect_str = connect_str
-        self.sock_type = sock_type or zmq.SUB
+    def __init__(self, address, sock_type=None, subscribe=b"", bind=False, **kwargs):
+        self.address = address
         self.subscribe = subscribe
         self.bind = bind
         self.socket = None
         self.context = None
+
+        # 1. Determine the default socket type based on the 'bind' flag.
+        if self.bind:
+            default_sock_type = zmq.PULL
+        else:
+            default_sock_type = zmq.SUB
+
+        # 2. Use the user-provided sock_type if it exists, otherwise use our smart default.
+        self.sock_type = sock_type if sock_type is not None else default_sock_type
+
+        # 3. Validate the final configuration.
+        if self.bind:
+            # If binding, the socket type MUST be PULL. No exceptions.
+            if self.sock_type != zmq.PULL:
+                raise ValueError(
+                    "Configuration error: When bind=True, the socket type MUST be zmq.PULL. "
+                    "You are trying to override it with an incompatible type. "
+                    "Please remove the `sock_type` parameter to use the correct default."
+                )
+        elif self.sock_type not in [zmq.SUB, zmq.PULL]:
+            # If connecting, only SUB and PULL are supported for this source.
+            raise ValueError(
+                f"Configuration error: When bind=False, sock_type must be zmq.SUB or zmq.PULL. "
+                f"You provided {self.sock_type}."
+            )
+
         super().__init__(**kwargs)
 
     async def run(self):
@@ -84,9 +98,9 @@ class from_zmq(Source):
             self.socket.setsockopt(zmq.SUBSCRIBE, self.subscribe)
 
         if self.bind:
-            self.socket.bind(self.connect_str)
+            self.socket.bind(self.address)
         else:
-            self.socket.connect(self.connect_str)
+            self.socket.connect(self.address)
 
         while not self.stopped:
             try:
