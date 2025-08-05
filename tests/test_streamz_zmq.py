@@ -27,6 +27,27 @@ def test_stream_registration():
     assert hasattr(Stream, "to_zmq")
 
 
+def test_from_zmq_bind_wrong_sock_type():
+    """Test that from_zmq raises ValueError if bind=True and sock_type is not zmq.PULL."""
+    with pytest.raises(ValueError) as excinfo:
+        Stream.from_zmq("tcp://*:5555", sock_type=zmq.SUB, bind=True)
+    assert "bind=True" in str(excinfo.value)
+
+
+def test_from_zmq_invalid_sock_type_connect():
+    """Test that from_zmq raises ValueError if bind=False and sock_type is not SUB or PULL."""
+    with pytest.raises(ValueError) as excinfo:
+        Stream.from_zmq("tcp://localhost:5555", sock_type=zmq.REQ, bind=False)
+    assert "Configuration error" in str(excinfo.value)
+
+
+def test_from_zmq_subscribe_wrong_sock_type():
+    """Test that from_zmq raises ValueError if subscribe is set and sock_type is not zmq.SUB."""
+    with pytest.raises(ValueError) as excinfo:
+        Stream.from_zmq("tcp://localhost:5555", sock_type=zmq.PULL, subscribe=b"topic")
+    assert "subscribe" in str(excinfo.value)
+
+
 @pytest.mark.asyncio
 async def test_zmq_sink_basic():
     """Test basic functionality of to_zmq sink."""
