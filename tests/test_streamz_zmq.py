@@ -262,7 +262,6 @@ async def test_zmq_pipeline_integration():
         )
 
 
-@pytest.mark.asyncio
 def test_zmq_from_zmq_bind():
     """Test that from_zmq can bind and receive messages from a connecting publisher."""
     bind_port = 5560
