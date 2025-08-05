@@ -84,6 +84,13 @@ class from_zmq(Source):
                 f"You provided {self.sock_type}."
             )
 
+        # 4. Validate subscribe usage: only allowed for SUB sockets
+        if self.subscribe != b"" and self.sock_type != zmq.SUB:
+            raise ValueError(
+                "Configuration error: The 'subscribe' parameter is only valid for zmq.SUB sockets. "
+                f"You provided subscribe={self.subscribe!r} with sock_type={self.sock_type}."
+            )
+
         super().__init__(**kwargs)
 
     async def run(self):
