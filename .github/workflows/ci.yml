@@ -51,7 +51,7 @@ jobs:
         version: "latest"
     
     - name: Set up Python
-      run: uv python install 3.8
+      run: uv python install 3.9
     
     - name: Build package
       run: uv build

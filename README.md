@@ -143,7 +143,7 @@ Sends stream elements to a ZMQ socket.
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.9+
 - streamz >= 0.6.4
 - pyzmq >= 27.0.0
 
