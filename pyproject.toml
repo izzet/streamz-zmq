@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "streamz-zmq"
-version = "0.1.4"
+version = "0.1.5"
 description = "ZeroMQ integration for streamz - high-performance streaming data processing"
 authors = [{ name = "Izzet Yildirim", email = "izzetcyildirim@gmail.com" }]
 maintainers = [{ name = "Izzet Yildirim", email = "izzetcyildirim@gmail.com" }]
